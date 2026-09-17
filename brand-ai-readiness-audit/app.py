@@ -7,6 +7,7 @@ import json
 import os
 import subprocess
 import sys
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -28,6 +29,9 @@ app.config["UPLOAD_FOLDER"] = str(ROOT / "audit-output")
 
 FALLBACK_DB = {"users": [], "audits": []}
 FALLBACK_DB_PATH = ROOT / "audit-output" / ".fallback-db.json"
+MONGO_RETRY_INTERVAL = 30
+_mongo_db = None
+_mongo_retry_after = 0.0
 DEFAULT_DEMO_USER = {
     "email": "demo@brandaudit.ai",
     "password": "brandaudit123",
@@ -133,13 +137,20 @@ def mongo_client():
 
 
 def database():
+    global _mongo_db, _mongo_retry_after
+    if _mongo_db is not None:
+        return _mongo_db
+    now = time.monotonic()
+    if now < _mongo_retry_after:
+        return None
     client = mongo_client()
     if client is None:
+        _mongo_retry_after = now + MONGO_RETRY_INTERVAL
         return None
-    db = client[os.environ.get("MONGO_DB", "brand_audit")]
-    db.users.create_index("email", unique=True)
-    db.audits.create_index("user_id")
-    return db
+    _mongo_db = client[os.environ.get("MONGO_DB", "brand_audit")]
+    _mongo_db.users.create_index("email", unique=True)
+    _mongo_db.audits.create_index("user_id")
+    return _mongo_db
 
 
 def fallback_user_store():
