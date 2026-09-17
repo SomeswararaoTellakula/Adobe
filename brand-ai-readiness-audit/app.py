@@ -27,6 +27,11 @@ app = Flask(__name__, template_folder=str(ROOT / "templates"))
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "brand-audit-secret-key")
 app.config["UPLOAD_FOLDER"] = str(ROOT / "audit-output")
 
+
+@app.errorhandler(RuntimeError)
+def storage_unavailable(error):
+    return jsonify({"status": "error", "error": str(error)}), 503
+
 FALLBACK_DB = {"users": [], "audits": []}
 FALLBACK_DB_PATH = ROOT / "audit-output" / ".fallback-db.json"
 MONGO_RETRY_INTERVAL = 30
@@ -142,11 +147,11 @@ def database():
         return _mongo_db
     now = time.monotonic()
     if now < _mongo_retry_after:
-        return None
+        raise RuntimeError("MongoDB is required. Set MONGO_URI to a reachable MongoDB deployment.")
     client = mongo_client()
     if client is None:
         _mongo_retry_after = now + MONGO_RETRY_INTERVAL
-        return None
+        raise RuntimeError("MongoDB is required. Set MONGO_URI to a reachable MongoDB deployment.")
     _mongo_db = client[os.environ.get("MONGO_DB", "brand_audit")]
     _mongo_db.users.create_index("email", unique=True)
     _mongo_db.audits.create_index("user_id")
@@ -472,11 +477,14 @@ def audit_detail(audit_id: str):
 
 @app.route("/health")
 def health():
-    db = database()
+    try:
+        db = database()
+    except RuntimeError as exc:
+        return jsonify({"status": "error", "mongo_connected": False, "error": str(exc)}), 503
     return jsonify({
         "status": "ok",
         "mongo_connected": db is not None,
-        "user_count": len(fallback_user_store()) if db is None else db.users.count_documents({}),
+        "user_count": db.users.count_documents({}),
     })
 
 
