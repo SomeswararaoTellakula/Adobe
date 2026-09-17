@@ -33,9 +33,31 @@ DEFAULT_DEMO_USER = {
     "name": "Demo User",
 }
 
+ANALYSIS_DIMENSIONS = (
+    ("access", "Access", "Can crawlers and AI agents reach the site?", "discoverability.access"),
+    ("extractability", "Extractability", "Can machines read the content that visitors see?", "discoverability.extractability"),
+    ("semantics", "Semantics", "Are the brand and its facts structured clearly?", "discoverability.semantics"),
+    ("answerability", "Answerability", "Can assistants quote useful, self-contained answers?", "discoverability.answerability"),
+    ("trust", "Freshness & corroboration", "Is the information current, attributable, and corroborated?", "discoverability.trust"),
+    ("engagement", "Engagement", "Can referred visitors understand and continue?", "engagement.landing"),
+)
+
 
 def create_server(host="127.0.0.1", port=8000):
     return make_server(host, port, app)
+
+
+def build_analysis_sections(report):
+    findings = report.get("findings", [])
+    return [
+        {
+            "key": key,
+            "label": label,
+            "description": description,
+            "findings": [finding for finding in findings if finding.get("dimension") == dimension],
+        }
+        for key, label, description, dimension in ANALYSIS_DIMENSIONS
+    ]
 
 
 def ensure_demo_user():
@@ -361,7 +383,8 @@ def audit_detail(audit_id: str):
             return redirect(url_for("dashboard"))
     report_path = Path(audit.get("report_path", ROOT / "audit-output"))
     report = read_report(str(report_path)) if report_path.exists() else {"summary_text": "No readable report was found."}
-    return render_template("audit_detail.html", user=user, audit=audit, report=report)
+    analysis_sections = build_analysis_sections(report)
+    return render_template("audit_detail.html", user=user, audit=audit, report=report, analysis_sections=analysis_sections)
 
 
 @app.route("/health")

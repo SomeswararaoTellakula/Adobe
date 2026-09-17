@@ -103,6 +103,26 @@
     .chip.medium { background: rgba(96,165,250,0.12); color: #bfdbfe; border-color: rgba(96,165,250,0.3); }
     .chip.low { background: rgba(52,211,153,0.12); color: #bbf7d0; border-color: rgba(52,211,153,0.3); }
     .chip.info { background: rgba(96,165,250,0.12); color: #dbeafe; border-color: rgba(96,165,250,0.3); }
+    .analysis-list { display: grid; gap: 16px; }
+    .analysis-section {
+      background: rgba(2, 6, 23, 0.34);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+    }
+    .analysis-heading { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; }
+    .analysis-heading h3 { margin: 0 0 6px; font-size: 1.1rem; }
+    .analysis-heading p { margin: 0; color: var(--muted); line-height: 1.5; }
+    .finding-list { display: grid; gap: 12px; margin-top: 18px; }
+    .finding { border-top: 1px solid var(--border); padding-top: 16px; }
+    .finding:first-child { border-top: 0; padding-top: 0; }
+    .finding-title { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .finding-title strong { font-size: 0.98rem; }
+    .finding p { margin: 9px 0 0; color: #cbd5e1; line-height: 1.6; }
+    .finding-label { color: var(--muted); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; }
+    .finding ul { margin: 8px 0 0 18px; color: #cbd5e1; line-height: 1.6; }
+    .empty-analysis { margin: 16px 0 0; color: var(--muted); }
+    .affected { margin-top: 10px; color: var(--muted); font-size: 0.82rem; overflow-wrap: anywhere; }
     @media (max-width: 760px) {
       .summary-grid { grid-template-columns: repeat(2, minmax(0,1fr)); }
     }
@@ -132,6 +152,34 @@
 
       <div class="section-title">Audit summary</div>
       <pre>{{ report.summary_text or 'No summary available.' }}</pre>
+
+      <div class="section-title">Six analysis details</div>
+      <div class="analysis-list">
+        {% for section in analysis_sections %}
+        <section class="analysis-section" id="analysis-{{ section.key }}">
+          <div class="analysis-heading">
+            <div>
+              <h3>{{ loop.index }}. {{ section.label }}</h3>
+              <p>{{ section.description }}</p>
+            </div>
+            <span class="chip info">{{ section.findings|length }} finding{{ '' if section.findings|length == 1 else 's' }}</span>
+          </div>
+          {% if section.findings %}
+          <div class="finding-list">
+            {% for finding in section.findings %}
+            <article class="finding">
+              <div class="finding-title"><span class="chip {{ finding.severity }}">{{ finding.severity }}</span><strong>{{ finding.id }} · {{ finding.title }}</strong></div>
+              <p><span class="finding-label">Evidence</span><br>{{ finding.evidence }}</p>
+              <p><span class="finding-label">Recommended fix</span><br>{{ finding.suggested_action.summary }}</p>
+              {% if finding.suggested_action.steps %}<ul>{% for step in finding.suggested_action.steps %}<li>{{ step }}</li>{% endfor %}</ul>{% endif %}
+              {% if finding.affected_urls %}<div class="affected"><span class="finding-label">Affected pages</span><br>{{ finding.affected_count }} page{{ '' if finding.affected_count == 1 else 's' }} · {{ finding.affected_urls|join(', ') }}</div>{% endif %}
+            </article>
+            {% endfor %}
+          </div>
+          {% else %}<p class="empty-analysis">No findings recorded for this analysis area.</p>{% endif %}
+        </section>
+        {% endfor %}
+      </div>
     </section>
   </div>
 </body>
