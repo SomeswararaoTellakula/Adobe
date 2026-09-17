@@ -22,7 +22,7 @@ from werkzeug.serving import make_server
 ROOT = Path(__file__).resolve().parent
 AUDIT_SCRIPT = ROOT / "skills" / "audit-orchestrator" / "scripts" / "run_audit.py"
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder=str(ROOT / "templates"))
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "brand-audit-secret-key")
 app.config["UPLOAD_FOLDER"] = str(ROOT / "audit-output")
 
