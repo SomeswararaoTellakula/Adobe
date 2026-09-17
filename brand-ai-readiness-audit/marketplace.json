@@ -1,31 +1,45 @@
 {
   "name": "brand-ai-readiness-audit",
   "version": "1.0.0",
+  "description": "Audits any website for the problems that stop AI assistants finding, trusting and citing it, and that stop assistant-referred visitors staying once they land. Produces one structured report of evidence-backed findings and prioritized fixes.",
+  "license": "MIT",
+  "entrypoint": "audit-orchestrator",
   "skills": [
     {
       "id": "audit-orchestrator",
       "path": "skills/audit-orchestrator",
-      "entrypoint": true
+      "entrypoint": true,
+      "description": "Entrypoint. Scopes the audit, triggers one collection, runs every analyzer over it, normalises severity, de-duplicates by root cause and emits the single audit report."
     },
     {
-      "id": "crawl-render-audit",
-      "path": "skills/crawl-render-audit"
+      "id": "crawl-access-audit",
+      "path": "skills/crawl-access-audit",
+      "description": "Stage 1 - reach. Owns all network I/O: collects the site pack, then checks robots.txt gating by agent role, snippet directives, bot walls, sitemaps, canonicalisation and latency."
+    },
+    {
+      "id": "render-extractability-audit",
+      "path": "skills/render-extractability-audit",
+      "description": "Stage 2 - read. Detects content that exists for a browser but not for a text fetcher: JavaScript-assembled pages, facts locked in images or media, iframe and interaction-gated content."
     },
     {
       "id": "structured-data-audit",
-      "path": "skills/structured-data-audit"
+      "path": "skills/structured-data-audit",
+      "description": "Stage 3 - parse. Checks schema.org validity, type coverage gated by site type, required properties, entity identity fields and agreement between markup and visible content."
     },
     {
-      "id": "content-accessibility-audit",
-      "path": "skills/content-accessibility-audit"
+      "id": "answerability-audit",
+      "path": "skills/answerability-audit",
+      "description": "Stage 4 - quote. Checks whether pages state self-contained, checkable facts an assistant can lift: definitional sentences, real numbers, chunk boundaries and question-shaped content."
     },
     {
-      "id": "freshness-entity-audit",
-      "path": "skills/freshness-entity-audit"
+      "id": "freshness-corroboration-audit",
+      "path": "skills/freshness-corroboration-audit",
+      "description": "Stage 5 - trust. Checks dates, attribution, entity disambiguation and the off-site agreement that decides whether an extracted fact is repeated."
     },
     {
       "id": "engagement-audit",
-      "path": "skills/engagement-audit"
+      "path": "skills/engagement-audit",
+      "description": "Stage 6 - stay. Checks whether a visitor who lands deep from an assistant answer is oriented, unblocked, and able to continue the task."
     }
   ]
 }

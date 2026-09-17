@@ -1,89 +1,76 @@
 ---
 name: structured-data-audit
 description: >
-  Audit a website for machine-readable structured data coverage, schema
-  correctness, and citation-surface metadata. Validates JSON-LD blocks
-  (parseability, @type coverage for Organization, WebSite, BreadcrumbList,
-  SearchAction, Product/Article, sameAs disambiguation), microdata
-  itemtype attributes, Open Graph required tags, Twitter card tags, and
-  rel=canonical presence and absoluteness.
+  Stage 3 of an AI-readiness audit: checks whether a page's entity and facts are
+  explicitly typed rather than left to be guessed from prose. Validates JSON-LD and
+  microdata, checks type coverage against the inferred site type, checks high-value
+  properties (Offer price and availability, Article datePublished and author,
+  LocalBusiness address and telephone), checks entity identity fields (sameAs, @id,
+  legalName), verifies that markup agrees with the visible page, and checks titles,
+  descriptions, Open Graph tags, language declarations and heading structure. Use when
+  auditing schema.org markup for AI visibility, when assistants misattribute or confuse a
+  brand with a similarly-named one, when rich results are missing, or as stage 3 of the
+  brand-ai-readiness-audit marketplace. Reads a site pack and performs no network access.
 license: MIT
-tags: ["structured-data", "json-ld", "schema.org", "open-graph", "twitter-cards", "seo"]
-declared_tools:
-  - shell:execute-read-only
-  - python:execute-script
-inputs:
-  - name: url
-    type: string
-    required: true
-    description: Absolute homepage URL.
-outputs:
-  - name: findings
-    type: application/json
-    description: JSON array of findings for this audit dimension.
+allowed-tools: [Bash, Read, Write]
 ---
 
-# Structured Data Audit
+# Structured data audit (stage 3: parse)
+
+Prose has to be interpreted. Structured data is read. This stage checks whether the facts
+a brand most wants repeated are stated in a form that cannot be misread — and whether the
+brand has a machine-readable identity for those facts to attach to.
 
 ## When to use
 
-Invoke this skill once the homepage DOM is available; it covers the third
-AI-discovery failure mode: **the crawler cannot pick out the specific fact
-someone is looking for** because facts are implicit and untyped.
+- Stage 3 of the marketplace audit.
+- Standalone, when a brand is found but described wrongly, blended with a namesake, or
+  when product and article rich results are missing.
 
 ## Inputs
 
-| Name | Required | Description |
-|------|----------|-------------|
-| `url`  | yes | Absolute homepage URL (scheme + host + path). |
+A site pack directory.
 
 ## Procedure
 
-1. **Parse JSON-LD blocks**
-   - For every `<script type="application/ld+json">`, parse its contents as
-     JSON. On parse failure, file `Invalid JSON-LD block` (high).
-   - Flatten arrays and `@graph` nodes into a flat list of typed entities.
+```bash
+python3 scripts/check_structured_data.py --pack ./pack --out findings-schema.json
+```
 
-2. **Parse microdata**
-   - Extract every `itemtype=` attribute; normalize to schema.org type
-     names (`schema.org/TypeName` → `TypeName`).
+Read `references/schema-requirements.md` for what each page class should declare and the
+minimum property set per type.
 
-3. **Overall presence**
-   - 0 JSON-LD blocks + 0 microdata → `No structured data found on
-     homepage` (critical).
+## Expectations are gated by site type
 
-4. **Required schema.org types**
-   - No `Organization`/`LocalBusiness` → high.
-     - If present and no `sameAs` array → high (entity anchor).
-     - If present and missing `name` / `url` / `logo` → medium per field.
-   - No `WebSite` → medium.
-     - If WebSite has no `potentialAction` of type `SearchAction` → medium.
-   - No `BreadcrumbList` → medium.
+The collector infers a site type (ecommerce, saas, publisher, local business, docs,
+brand/marketing). A documentation site is never told it is missing `Product` markup, and a
+type is only reported missing when **every** sampled page of that class lacks it — one
+page without markup is a gap in coverage, reported separately and less severely, not a
+missing capability.
 
-5. **Open Graph**
-   - Missing any of `og:title`, `og:type`, `og:image`, `og:url` → medium.
-   - `og:image` is relative → low.
+Two checks matter more than the rest and are worth understanding:
 
-6. **Twitter Cards**
-   - Zero `twitter:*` tags → low.
-   - Missing any of `twitter:card`, `twitter:title`, `twitter:description`,
-     `twitter:image` → low.
+- **`sameAs` on the Organization node** is the explicit statement "this brand is that
+  profile". It is the mechanism by which a site connects to the independent sources that
+  corroborate it, and the main defence against being merged with a namesake.
+- **Markup that disagrees with the visible page** is worse than no markup. A stale
+  hard-coded price in JSON-LD produces confidently wrong answers, and a detected mismatch
+  discounts both signals. Structured data and the rendered page must come from one source.
 
-7. **Canonical**
-   - No `<link rel="canonical" href="...">` → high.
-   - Present but href is relative (not absolute) → medium.
+## Without a shell
 
-8. **Cross-page aggregation (on N sampled internal pages)**
-   - X% lack rel=canonical → medium.
-   - 0/N carry any structured data at all → high.
+`references/schema-requirements.md` holds every check, threshold and gate, so this stage can be run by hand
+with fetch and read tools alone. Read each page's `<script type="application/ld+json">` blocks, parse them, and compare the declared types against the expectations table for that page class. Check `sameAs`, `@id`, and whether markup values match the visible page.
+
+Record the same evidence — counts and sample size — and mark anything you could not measure
+as unchecked rather than passing.
 
 ## Output
 
-A JSON array of findings with the standard finding shape.
+Findings with ids `SD-*`. Type-coverage findings are suffixed with the page class
+(`SD-004.product`) so a reader can see which template to fix.
 
-## Executable entry point
+## Guardrails
 
-```
-pip install -r skills/audit-orchestrator/scripts/requirements.txt
-python skills/structured-data-audit/scripts/run.py https://example.com --pretty
-```
+Read-only analysis of an existing pack. No network access. Structured data is parsed
+defensively: a malformed block is reported, never executed or trusted.

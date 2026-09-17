@@ -1,90 +1,79 @@
 ---
 name: engagement-audit
 description: >
-  Audit a website for on-site-engagement factors that keep visitors around
-  once they arrive — navigation landmarks, internal link density and
-  distribution, on-site search mechanisms (form + JSON-LD SearchAction),
-  call-to-action density and coverage, related/recent content blocks,
-  pagination vs. infinite-scroll signals, footer richness, HTML payload
-  weight, and third-party origin resource hints (preconnect, dns-prefetch).
+  Stage 6 of an AI-readiness audit: checks whether a visitor referred by an AI assistant
+  stays once they land. Checks deep-landing orientation (breadcrumbs, self-describing
+  headings, whether the page says whose site this is), overlays and consent walls covering
+  the content on arrival, dead-end pages with no contextual next step, missing mobile
+  viewport, layout shift from images with no dimensions, page weight and latency,
+  unhelpful 404 pages, vague link text, content gated behind forms, and missing on-site
+  search. Use when AI-referred or search traffic arrives and bounces, when auditing
+  landing-page experience for assistant referrals, when a site converts badly on deep
+  entries, or as stage 6 of the brand-ai-readiness-audit marketplace. Reads a site pack
+  and performs no network access.
 license: MIT
-tags: ["engagement", "navigation", "cta", "internal-links", "search", "performance"]
-declared_tools:
-  - shell:execute-read-only
-  - python:execute-script
-inputs:
-  - name: url
-    type: string
-    required: true
-    description: Absolute homepage URL.
-outputs:
-  - name: findings
-    type: application/json
-    description: JSON array of findings.
+allowed-tools: [Bash, Read, Write]
 ---
 
-# Engagement Audit
+# Engagement audit (stage 6: stay)
+
+Winning the citation is half the job. The other half starts when someone clicks it.
+
+Assistant referrals are not search referrals, and auditing them as if they were misses the
+real failures:
+
+- They **land deep**, not on the homepage. The page has to establish whose site this is,
+  because the visitor never passed through the front door.
+- They arrive **holding an answer already** — the assistant told them something, and they
+  came to verify it or act on it. A page that makes them hunt for that fact has nothing to
+  hold them with, because they did not come to browse.
+- They arrive **without the context that got them here**. The conversation that produced
+  the click is invisible to the site, so the page has to be self-sufficient.
+- They skew **mobile**, where an overlay covers proportionally far more of the screen.
 
 ## When to use
 
-Invoke this skill to produce the **on-site engagement** half of the audit
-(why visitors who arrive don't stay). Focuses on orientation, pathways,
-and page-speed signals that are directly detectable from the static DOM
-and headers without running JavaScript profiling.
+- Stage 6 of the marketplace audit.
+- Standalone, when AI or search referrals bounce, or when analytics shows deep entries
+  converting far worse than homepage entries.
 
 ## Inputs
 
-| Name | Required | Description |
-|------|----------|-------------|
-| `url`  | yes | Absolute homepage URL. |
+A site pack directory.
 
 ## Procedure
 
-1. **Internal link graph**
-   - Count same-domain `<a href>` links (resolved to absolute).
-   - Fewer than 5 internal links on homepage → high.
-   - All internal links collapse to path `/` → medium.
+```bash
+python3 scripts/check_engagement.py --pack ./pack --out findings-engagement.json
+```
 
-2. **Navigation & footer landmarks**
-   - No `<nav>` element → medium.
-   - No `<footer>` → medium.
-   - Footer has <5 links → low.
+Read `references/landing-experience-checks.md` for thresholds and the confirmation steps
+for the checks that are markup inferences.
 
-3. **On-site search**
-   - Presence of `<form role="search">` OR an input with `type=search` /
-     `name=search` / `name=s`.
-   - Presence of JSON-LD `SearchAction` (depth-first search through all
-     blocks).
-   - Neither is present → medium.
+## Which findings are inferences
 
-4. **Call-to-action coverage**
-   - Search button/link/input text for CTA verbs: sign up, subscribe,
-     register, start, try, buy, book, demo, get started, request, contact,
-     download, join.
-   - 0 CTAs on page with >800 visible chars → high.
-   - Exactly 1 CTA → low.
+Overlay, gating and search checks are inferred from markup: a modal class is not proof a
+modal opens on arrival, and a client-side search widget may not appear in served HTML.
+These are emitted at low confidence with a `verify_by` note, and the orchestrator demotes
+them one severity level automatically. Confirming them takes one minute in a private
+window on a phone-width screen, and the report says so rather than asserting them.
 
-5. **Content continuity**
-   - On pages with ≥1500 visible chars, look for heading strings
-     containing "related / recent / popular / featured / trending /
-     you might / recommended". Absent → medium.
+Checks that are directly observable — no viewport tag, no in-content internal links,
+images without dimensions, a bare 404 — are reported at high confidence.
 
-6. **Pagination / list structure**
-   - Many `<article>`/`<li>` nodes but no `<a rel=next>` or
-     `<link rel=next>` → low.
+## Without a shell
 
-7. **Performance heuristics**
-   - HTML response > 500 KB → medium.
-   - External links exist but no `<link rel=dns-prefetch|preconnect>` →
-     low.
+`references/landing-experience-checks.md` holds every check, threshold and gate, so this stage can be run by hand
+with fetch and read tools alone. Read each deep page as a first-time visitor arriving from an answer: is there a breadcrumb, does the H1 name the subject, is there a viewport tag, are there in-content internal links, and is there modal or consent markup? Weight and timing checks are skipped.
+
+Record the same evidence — counts and sample size — and mark anything you could not measure
+as unchecked rather than passing.
 
 ## Output
 
-JSON array of standard findings.
+Findings with ids `ENG-*`.
 
-## Executable entry point
+## Guardrails
 
-```
-pip install -r skills/audit-orchestrator/scripts/requirements.txt
-python skills/engagement-audit/scripts/run.py https://example.com --pretty
-```
+Read-only analysis of an existing pack. No network access, no interaction with the live
+site, no form submission.

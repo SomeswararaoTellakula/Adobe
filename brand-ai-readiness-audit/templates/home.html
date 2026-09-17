@@ -1,0 +1,538 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Brand Audit — AI Visibility Platform</title>
+  <meta name="description" content="Professional AI brand readiness platform for tracking discoverability, citations, structured data, answerability, and visitor conversion." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #07111f;
+      --bg-soft: #0d1728;
+      --panel: rgba(15,23,42,0.72);
+      --panel-strong: #0f172a;
+      --card: rgba(15,23,42,0.86);
+      --primary: #7c3aed;
+      --primary-2: #22d3ee;
+      --primary-3: #4f46e5;
+      --text: #edf2ff;
+      --muted: #a9b7d0;
+      --border: rgba(148,163,184,0.18);
+      --success: #34d399;
+      --warning: #fbbf24;
+      --danger: #f87171;
+      --shadow: 0 28px 70px rgba(2,6,23,0.45);
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      font-family: 'Inter', sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(124,58,237,0.28), transparent 24%),
+        radial-gradient(circle at top right, rgba(34,211,238,0.12), transparent 20%),
+        linear-gradient(180deg, #020817 0%, #07111f 35%, #0b1220 100%);
+    }
+    a { text-decoration: none; color: inherit; }
+    img { max-width: 100%; }
+    .container {
+      width: min(1200px, 92vw);
+      margin: 0 auto;
+    }
+    .navbar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(16px);
+      background: rgba(2,8,23,0.5);
+      border-bottom: 1px solid rgba(148,163,184,0.14);
+    }
+    .nav-inner {
+      height: 80px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 800;
+      letter-spacing: -0.05em;
+      font-size: 1.2rem;
+    }
+    .brand-mark {
+      width: 36px;
+      height: 36px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--primary), var(--primary-2));
+      display: grid;
+      place-items: center;
+      box-shadow: 0 15px 25px rgba(124,58,237,0.35);
+      font-weight: 900;
+    }
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 26px;
+      color: var(--muted);
+      font-size: 0.95rem;
+      font-weight: 600;
+    }
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 12px;
+      border: 1px solid transparent;
+      padding: 12px 18px;
+      font-weight: 700;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      cursor: pointer;
+    }
+    .btn:hover { transform: translateY(-1px); }
+    .btn-outline {
+      border-color: var(--border);
+      background: rgba(15,23,42,0.4);
+      color: var(--text);
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary), var(--primary-2));
+      color: white;
+      box-shadow: 0 18px 30px rgba(124,58,237,0.35);
+    }
+    .hero {
+      padding: 88px 0 64px;
+    }
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 34px;
+      align-items: center;
+    }
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid rgba(124,58,237,0.25);
+      background: rgba(124,58,237,0.08);
+      color: #ddd6fe;
+      padding: 8px 12px;
+      border-radius: 999px;
+      font-size: 0.74rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      font-weight: 800;
+    }
+    h1 {
+      margin: 22px 0 20px;
+      font-size: clamp(3rem, 5vw, 5rem);
+      line-height: 0.96;
+      letter-spacing: -0.07em;
+    }
+    .lead {
+      max-width: 620px;
+      color: var(--muted);
+      font-size: 1.08rem;
+      line-height: 1.8;
+      margin-bottom: 28px;
+    }
+    .cta-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .trust-row {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      flex-wrap: wrap;
+      margin-top: 32px;
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+    .trust-row .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--success);
+      box-shadow: 0 0 12px rgba(52,211,153,0.8);
+    }
+    .hero-visual {
+      position: relative;
+      min-height: 520px;
+      display: grid;
+      place-items: center;
+    }
+    .dashboard-card {
+      position: relative;
+      width: min(100%, 500px);
+      padding: 18px;
+      background: rgba(15,23,42,0.78);
+      border: 1px solid var(--border);
+      border-radius: 30px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(12px);
+    }
+    .panel-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 10px 16px;
+      color: var(--muted);
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .mini-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+    .mini-box {
+      background: rgba(15,23,42,0.8);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 14px 12px;
+    }
+    .mini-box .kicker { color: var(--muted); font-size: 0.7rem; }
+    .mini-box strong { display: block; margin-top: 8px; font-size: 1.7rem; }
+    .chart-box {
+      background: linear-gradient(180deg, rgba(124,58,237,0.12), rgba(15,23,42,0.78));
+      border: 1px solid rgba(124,58,237,0.22);
+      border-radius: 20px;
+      padding: 18px 14px 10px;
+    }
+    .bars {
+      display: flex;
+      align-items: end;
+      gap: 12px;
+      height: 150px;
+      margin-top: 10px;
+    }
+    .bar { flex: 1; border-radius: 11px 11px 0 0; background: linear-gradient(180deg, var(--primary-2), var(--primary)); }
+    .bar:nth-child(1) { height: 32%; }
+    .bar:nth-child(2) { height: 52%; }
+    .bar:nth-child(3) { height: 68%; }
+    .bar:nth-child(4) { height: 85%; }
+    .bar:nth-child(5) { height: 100%; }
+    .label-row {
+      margin-top: 16px;
+      display: flex;
+      justify-content: space-between;
+      color: var(--muted);
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .section {
+      padding: 40px 0;
+    }
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: end;
+      gap: 18px;
+      margin-bottom: 24px;
+    }
+    .section-header h2 {
+      margin: 0;
+      font-size: clamp(2rem, 3vw, 3rem);
+      letter-spacing: -0.06em;
+    }
+    .section-header p {
+      margin: 0;
+      color: var(--muted);
+      max-width: 620px;
+      line-height: 1.7;
+    }
+    .features {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0,1fr));
+      gap: 18px;
+    }
+    .feature-card {
+      background: rgba(15,23,42,0.72);
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      padding: 24px 20px;
+      box-shadow: var(--shadow);
+    }
+    .icon {
+      width: 50px;
+      height: 50px;
+      border-radius: 16px;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(135deg, rgba(124,58,237,0.18), rgba(34,211,238,0.18));
+      border: 1px solid rgba(124,58,237,0.2);
+      margin-bottom: 18px;
+      font-size: 1.2rem;
+    }
+    .feature-card h3 { margin: 0 0 12px; font-size: 1.3rem; }
+    .feature-card p { margin: 0; color: var(--muted); line-height: 1.7; }
+    .pricing { padding-bottom: 90px; }
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0,1fr));
+      gap: 22px;
+      margin-top: 28px;
+    }
+    .price-card {
+      background: rgba(15,23,42,0.72);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 28px 22px;
+      box-shadow: var(--shadow);
+    }
+    .price-card.featured {
+      background: linear-gradient(180deg, rgba(124,58,237,0.14), rgba(15,23,42,0.9));
+      border-color: rgba(124,58,237,0.28);
+    }
+    .tier {
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-weight: 700;
+      font-size: 0.72rem;
+    }
+    .price {
+      margin: 18px 0 10px;
+      font-size: 2.8rem;
+      letter-spacing: -0.06em;
+      font-weight: 800;
+    }
+    .price small { font-size: 1rem; color: var(--muted); }
+    ul {
+      margin: 22px 0 26px;
+      padding-left: 18px;
+      color: var(--muted);
+      line-height: 2;
+    }
+    .cta-panel {
+      background: linear-gradient(135deg, rgba(124,58,237,0.18), rgba(34,211,238,0.1));
+      border: 1px solid rgba(124,58,237,0.25);
+      border-radius: 30px;
+      padding: 42px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 18px;
+      box-shadow: var(--shadow);
+    }
+    .cta-panel h3 { margin: 0 0 8px; font-size: clamp(2rem, 3vw, 2.5rem); letter-spacing: -0.05em; }
+    .cta-panel p { margin: 0; color: var(--muted); }
+    footer {
+      padding: 32px 0 60px;
+      color: var(--muted);
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    @media (max-width: 980px) {
+      .hero-grid, .features, .pricing-grid { grid-template-columns: 1fr; }
+      .nav-links { display: none; }
+      .cta-panel { flex-direction: column; align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+  <header class="navbar">
+    <div class="container nav-inner">
+      <div class="brand">
+        <div class="brand-mark">B</div>
+        <span>Brand Audit</span>
+      </div>
+      <nav class="nav-links">
+        <a href="#platform">Platform</a>
+        <a href="#solutions">Solutions</a>
+        <a href="#pricing">Pricing</a>
+        <a href="#resources">Resources</a>
+      </nav>
+      <div class="nav-actions">
+        <a class="btn btn-outline" href="{{ url_for('login_page') }}">Log in</a>
+        <a class="btn btn-primary" href="{{ url_for('login_page') }}">Book demo</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="container hero-grid">
+        <div>
+          <div class="eyebrow">AI-readiness audit intelligence</div>
+          <h1>Turn AI traffic into trusted brand growth.</h1>
+          <p class="lead">
+            Audit any URL to see how AI assistants discover, read, trust, and cite your brand. Measure readiness across crawl access, structured data, answerability, credibility, and conversion intent in one operational dashboard.
+          </p>
+          <div class="cta-row">
+            <a class="btn btn-primary" href="{{ url_for('login_page') }}">Start free audit</a>
+            <a class="btn btn-outline" href="#platform">See platform</a>
+          </div>
+          <div class="trust-row">
+            <span class="dot"></span>
+            <span>Trusted by growth teams, marketers, and brand operators</span>
+          </div>
+        </div>
+
+        <div class="hero-visual">
+          <div class="dashboard-card">
+            <div class="panel-top">
+              <span>AI readiness overview</span>
+              <span>Live</span>
+            </div>
+            <div class="mini-grid">
+              <div class="mini-box">
+                <div class="kicker">Citations</div>
+                <strong>72%</strong>
+              </div>
+              <div class="mini-box">
+                <div class="kicker">Trust</div>
+                <strong>84%</strong>
+              </div>
+              <div class="mini-box">
+                <div class="kicker">Stay</div>
+                <strong>91%</strong>
+              </div>
+            </div>
+            <div class="chart-box">
+              <div class="bars">
+                <div class="bar"></div>
+                <div class="bar"></div>
+                <div class="bar"></div>
+                <div class="bar"></div>
+                <div class="bar"></div>
+              </div>
+              <div class="label-row">
+                <span>Reach</span>
+                <span>Read</span>
+                <span>Trust</span>
+                <span>Quote</span>
+                <span>Stay</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="platform" class="section container">
+      <div class="section-header">
+        <h2>Built for the AI-first funnel.</h2>
+        <p>Every assessment is designed around the actual sequence AI assistants follow: reach, read, parse, quote, verify, and convert.</p>
+      </div>
+
+      <div class="features">
+        <article class="feature-card">
+          <div class="icon">↗</div>
+          <h3>Reach & access</h3>
+          <p>Find out whether crawlers are allowed in, whether pages are indexed correctly, and whether AI agents can get the content they need.</p>
+        </article>
+        <article class="feature-card">
+          <div class="icon">🧠</div>
+          <h3>Read & parse</h3>
+          <p>Detect whether your pages are readable in plain text, structured semantically, and effectively parseable for assistant answers.</p>
+        </article>
+        <article class="feature-card">
+          <div class="icon">✅</div>
+          <h3>Quote & trust</h3>
+          <p>Surface the facts and claims that are quotable, current, and corroborated so AI systems can cite your brand confidently.</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="solutions" class="section container">
+      <div class="section-header">
+        <h2>Everything your brand team needs in one place.</h2>
+      </div>
+      <div class="features">
+        <article class="feature-card">
+          <div class="icon">📊</div>
+          <h3>Executive scorecards</h3>
+          <p>Deliver concise visibility reporting for leadership, marketing, product, and SEO teams with a clear action roadmap.</p>
+        </article>
+        <article class="feature-card">
+          <div class="icon">🛡</div>
+          <h3>Risk detection</h3>
+          <p>Catch structural weaknesses that lead to AI omission, false trust, or lost conversion from responses that never cite your brand.</p>
+        </article>
+        <article class="feature-card">
+          <div class="icon">⚙</div>
+          <h3>Operational workflow</h3>
+          <p>Run audits on demand, compare changes over time, and prioritize fixes across several departments without spreadsheet chaos.</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="pricing" class="section pricing container">
+      <div class="section-header">
+        <h2>Simple pricing built for growth teams.</h2>
+      </div>
+
+      <div class="pricing-grid">
+        <article class="price-card">
+          <div class="tier">Starter</div>
+          <div class="price">$49 <small>/mo</small></div>
+          <ul>
+            <li>3 site audits / month</li>
+            <li>Core AI readiness checks</li>
+            <li>Basic dashboard</li>
+          </ul>
+          <a class="btn btn-outline" href="{{ url_for('login_page') }}">Get started</a>
+        </article>
+
+        <article class="price-card featured">
+          <div class="tier">Growth</div>
+          <div class="price">$149 <small>/mo</small></div>
+          <ul>
+            <li>Unlimited audits</li>
+            <li>Advanced scoring and insights</li>
+            <li>Historical reporting</li>
+            <li>Priority support</li>
+          </ul>
+          <a class="btn btn-primary" href="{{ url_for('login_page') }}">Most popular</a>
+        </article>
+
+        <article class="price-card">
+          <div class="tier">Enterprise</div>
+          <div class="price">Custom</div>
+          <ul>
+            <li>Multi-brand operations</li>
+            <li>Role-based access</li>
+            <li>SSO and integrations</li>
+            <li>Custom workflows</li>
+          </ul>
+          <a class="btn btn-outline" href="{{ url_for('login_page') }}">Talk to sales</a>
+        </article>
+      </div>
+    </section>
+
+    <section id="resources" class="container" style="padding-bottom: 80px;">
+      <div class="cta-panel">
+        <div>
+          <h3>Bring AI visibility into your operating rhythm.</h3>
+          <p>Launch automated audits, increase citations, and turn discoverability issues into measurable wins.</p>
+        </div>
+        <a class="btn btn-primary" href="{{ url_for('login_page') }}">Start your audit</a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="container">
+    <div>© 2026 Brand Audit</div>
+    <div>Privacy · Terms · Contact</div>
+  </footer>
+</body>
+</html>

@@ -1,158 +1,170 @@
 ---
 name: audit-orchestrator
 description: >
-  Entrypoint for the Brand AI-Readiness Audit marketplace. Given a website URL
-  (domain or homepage), composes the five specialized audit skills —
-  crawl-render-audit, structured-data-audit, content-accessibility-audit,
-  freshness-entity-audit, and engagement-audit — into a single audit report.
-  Produces the required fixed-schema JSON report (site, audited_at, summary,
-  findings) ready for a non-expert to act on. Use as the top-level skill for
-  diagnosing why a brand is not found, trusted, or repeated by AI assistants,
-  and why visitors who arrive don't engage.
+  Entrypoint for the brand-ai-readiness-audit marketplace. Audits any website for the
+  problems that stop AI assistants finding, reading, trusting and citing it, and the
+  problems hurting on-site engagement that stop assistant-referred visitors staying once
+  they land, then emits a single structured audit report of evidence-backed findings plus
+  suggested actions, each with severity and priority. Use this whenever a request asks for
+  findings and suggested actions for a website, or asks why a brand is invisible, stale or
+  wrong in ChatGPT / Claude / Perplexity / AI Overviews, why their site does not get
+  cited or recommended by AI assistants, how to improve AI discoverability, GEO, AEO or
+  LLM SEO, why AI-referred traffic bounces, or asks for an AI-readiness, AI-visibility
+  or AI-SEO audit of a URL. Use it even when the request names only a symptom
+  ("assistants describe us wrong", "we never show up in AI answers") rather than an audit.
 license: MIT
-tags: ["audit", "ai-discoverability", "engagement", "entrypoint", "reporting"]
-declared_tools:
-  - shell:execute-read-only
-  - file:read
-  - python:execute-script
-inputs:
-  - name: url
-    type: string
-    required: true
-    description: >
-      Target website. Accepts bare domain ("example.com") or a full URL
-      ("https://example.com/"). HTTPS is assumed when no scheme is given.
-outputs:
-  - name: report
-    type: application/json
-    description: >
-      Audit report against the fixed schema defined in marketplace rules.
-      Contains site, audited_at, summary (counts by severity), and findings.
+allowed-tools: [Bash, Read, Write, WebSearch, WebFetch]
 ---
 
-# Audit Orchestrator (Entrypoint)
+# Brand AI-Readiness Audit (entrypoint)
 
-## When to use
+Composes six analyzer skills into one audit and emits one report. Everything is
+recommend-only: this marketplace reads a site and reports. It never modifies one.
 
-Invoke this skill **once per website** whenever you need to produce a full
-Brand AI-Readiness audit. It is the only skill the caller needs to invoke
-directly; it is responsible for composing the five specialized skills and
-their outputs into the single final report.
+## The model this audit is built on
+
+A brand gets cited when six things succeed in order. Each stage is a separate skill,
+because each fails for different reasons and is fixed by different people:
+
+| Stage | Question | Skill |
+| --- | --- | --- |
+| 1. Reach | Is the machine allowed in, and does it get a response? | `crawl-access-audit` |
+| 2. Read | Is the content in the bytes that came back? | `render-extractability-audit` |
+| 3. Parse | Are the entity and its facts explicitly typed? | `structured-data-audit` |
+| 4. Quote | Is there a self-contained fact worth lifting? | `answerability-audit` |
+| 5. Trust | Is it current, attributable and corroborated elsewhere? | `freshness-corroboration-audit` |
+| 6. Stay | Does the visitor who arrives get what they came for? | `engagement-audit` |
+
+Order matters when reporting. A stage-1 failure makes stages 2-5 unmeasurable, so fix
+recommendations are prioritized in pipeline order, not by count.
 
 ## Inputs
 
-| Name | Required | Description |
-|------|----------|-------------|
-| `url` | yes      | Domain or homepage URL, e.g. `example.com` or `https://example.com/` |
+- **Required:** a URL or domain.
+- Optional: `--max-pages` (default 25), `--budget` seconds (default 240),
+  `--pack` to re-analyze an existing collection.
 
 ## Procedure
 
-1. **Normalize the input URL.** If no scheme is present, prefix with
-   `https://`. Treat any trailing path as the homepage; the canonical origin
-   is the scheme + host.
+1. **Scope.** Confirm the domain and note anything the user already suspects. If they
+   report a specific symptom ("Perplexity says we're in the wrong city"), keep it: it
+   usually names the stage to look at first.
 
-2. **Fetch and parse the homepage** using the shared auditor session
-   (polite User-Agent, connection pooling, robots.txt-compliant, reads only).
-   - Follow up to 5 redirects.
-   - On final response, record HTTP status, headers, and the parsed DOM.
+2. **Collect once.** Run the collector from `crawl-access-audit`. One polite, read-only,
+   robots-respecting pass produces a *site pack* that every analyzer then reads offline.
+   Collecting once is what keeps the audit under five minutes and reproducible.
 
-3. **Collect links and build a page sample.**
-   - Extract all `<a href>` values from the homepage.
-   - Resolve each to an absolute URL; filter to same-domain, robots-allowed,
-     http(s)-scheme links; dedupe.
-   - Pick up to `MAX_PAGES_CRAWLED` representative pages (homepage + a
-     balanced mix of depth-1 sections and deepest content pages) for the
-     cross-page sample.
+   ```bash
+   # Run from the marketplace root - the folder containing marketplace.json:
+   python3 skills/audit-orchestrator/scripts/run_audit.py \
+     --url https://example.com --out-dir ./audit-output
 
-4. **Invoke each specialized audit skill** against the homepage + sample.
-   Each skill returns zero or more findings:
-   - `crawl-render-audit` — crawler reachability, robots, sitemaps, HTTP
-     health, meta robots, render-path (SSR vs CSR vs noscript), <head>
-     integrity.
-   - `structured-data-audit` — JSON-LD / microdata / RDFa coverage, required
-     schema.org types (Organization, WebSite, BreadcrumbList, SearchAction,
-     Product/Article), Open Graph, Twitter cards, rel=canonical.
-   - `content-accessibility-audit` — image alt text, SVG titles, media
-     captions, `<title>` and meta description quality, heading hierarchy
-     (H1, skipped levels), text/HTML ratio, facts locked in non-text.
-   - `freshness-entity-audit` — Last-Modified / ETag, timestamps in
-     `<time datetime>` / OG article tags, copyright-year staleness,
-     `sameAs` / Wikipedia / Wikidata cross-reference, `<html lang>`,
-     hreflang self-reference.
-   - `engagement-audit` — internal link counts & distribution, `<nav>`
-     landmark, on-site search form + JSON-LD SearchAction, CTA density and
-     placement, related/recent content blocks, pagination signals, footer
-     richness, HTML payload size, resource hints.
+   # Or from anywhere, using this skill's own absolute path:
+   python3 /abs/path/to/skills/audit-orchestrator/scripts/run_audit.py \
+     --url https://example.com --out-dir ./audit-output
+   ```
 
-5. **Run cross-page aggregations** across the internal-page sample:
-   - Flag duplicate `<title>`, duplicate `meta description`, duplicate H1.
-   - Flag % of sampled pages that lack meta description, lack rel=canonical,
-     or carry no structured data at all.
-   - Count internal links that reach HTTP 4xx/5xx (broken links).
+   The script locates the marketplace by walking up from its own file, so the absolute
+   form works from any working directory - only the first form depends on where you are.
+   `run_audit.py` then resolves sibling skills through `marketplace.json`, so the manifest
+   is the composition contract rather than hard-coded paths.
 
-6. **Deduplicate, sort, and renumber findings.**
-   - Primary sort key: severity descending (critical → high → medium → low).
-   - Secondary sort key: original skill order for stable, deterministic
-     output.
-   - Assign contiguous IDs `F-001, F-002, …`.
+   Requires Python 3.8+ and nothing else: no install step, no third-party packages, no
+   network services. If `python3` is not on PATH, `python` works where it is version 3.
 
-7. **Build severity summary.** Count findings per severity (critical, high,
-   medium, low, info) and compute `total_findings`.
+3. **Optional: add a rendered capture.** If a browser tool is available, load the top few
+   URLs, extract the post-JavaScript text, and write one JSON file per page into
+   `<pack>/rendered/` as `{"url": ..., "word_count": N, "text": "..."}`. This converts
+   inferred JavaScript findings into directly measured ones. Skip it if no browser tool
+   exists; the audit degrades to lower confidence rather than failing.
 
-8. **Emit the report** as JSON matching exactly the required minimum schema
-   (fields below) plus any extra fields.
+4. **Analyze.** `run_audit.py` runs all six analyzers over the pack. Each writes
+   `findings-<name>.json`. They are independent: one failing never blocks the rest.
+
+5. **Verify off-site claims.** The freshness skill emits `agent_verification_tasks` —
+   searches that cannot be answered from the site alone (does the brand own its own name
+   in search, do independent sources describe it the same way, what does an assistant
+   actually say when asked about it). Run them with WebSearch, then fold what you learn
+   into the matching findings' evidence. The last one is the ground truth the whole audit
+   is trying to move, so run it if you run only one.
+
+6. **Merge.** Findings are normalised, de-duplicated by owner (see
+   `references/composition.md`), severity-adjusted (see `references/severity-model.md`),
+   sorted by severity then pipeline stage, and given sequential `F-NNN` ids.
+
+7. **Validate and emit.** `validate_report.py` runs automatically and fails the report if
+   any finding lacks evidence or an action, or if the counts disagree with the findings.
+   Report the summary counts and the top actions in your reply; attach `report.md` for
+   the readable version and `report.json` for the machine-readable one.
+
+## If no shell is available
+
+The scripts are the deterministic path, not the only one. Every check, threshold and
+false-positive gate is written down in the `references/` files, so an agent with only fetch
+and read tools can run the same audit by hand — smaller sample, same reasoning:
+
+1. Fetch `/robots.txt`. Evaluate it for each agent in
+   `crawl-access-audit/references/ai-crawler-registry.md`, classifying blocks by agent role.
+2. Fetch `/sitemap.xml` (and any sitemap named in robots.txt). Take the homepage plus up to
+   8 URLs spread across page classes — product, pricing, article, docs, about, contact.
+3. For each page, work through the check catalogue in each analyzer skill's `references/`
+   file, in pipeline order. The catalogues give the trigger, the evidence to record and the
+   gate that prevents a false positive.
+4. Assemble findings with the severity rules in `references/severity-model.md` and emit the
+   schema in `references/report-schema.json`.
+
+State the smaller sample in `limitations`. Findings you could not check — anything needing
+byte counts, timing or a full crawl — are omitted, never guessed.
+
+## Composition rules
+
+- **One owner per check.** Each check id belongs to exactly one skill. Overlapping
+  symptoms are assigned by *root cause*, not by where they show up. Content hidden in a
+  closed tab is a `render-extractability-audit` finding (a machine cannot read it) and not
+  also an engagement finding. `references/composition.md` holds the full ownership table.
+- **Do not re-report a cause as its effects.** When a page is a JavaScript shell, the
+  answerability skill excludes it instead of reporting it as badly written. One root cause
+  produces one finding.
+- **Analyzers never write the report.** They emit findings; only this skill assigns ids,
+  final severities and priorities. That keeps severity comparable across dimensions.
 
 ## Output
 
-The output is a single JSON document with this shape:
+`report.json`, conforming to `references/report-schema.json`. Required by the contract:
+`site`, `audited_at`, `summary` with counts by severity, and `findings[]` where every
+finding has `id`, `title`, `severity`, `evidence`, `suggested_action`. This marketplace
+also emits `scope`, `confidence`, `dimension`, `affected_urls`, `severity_note`,
+`suggested_action.steps`, `proactive_recommendations`, `agent_verification_tasks` and
+`limitations`.
 
-```json
-{
-  "site": "example.com",
-  "audited_at": "2026-09-20T14:32:00Z",
-  "summary": {
-    "total_findings": 6,
-    "critical": 1,
-    "high": 2,
-    "medium": 3,
-    "low": 0,
-    "info": 0
-  },
-  "findings": [
-    {
-      "id": "F-001",
-      "title": "Short human-readable title of the problem",
-      "severity": "critical | high | medium | low | info",
-      "evidence": "Concrete, reproducible evidence — counts, URLs, exact attribute values.",
-      "suggested_action": {
-        "summary": "Specific, mechanism-sound, actionable fix. May include code snippets.",
-        "priority": "critical | high | medium | low"
-      }
-    }
-  ]
-}
-```
+Two rules for the report body, both enforced by the validator:
 
-## Declared tools & safety
+- **Every finding carries evidence with numbers.** "0/12 product pages contain schema.org
+  markup" is a finding. "Structured data could be improved" is not.
+- **Every finding carries an action a non-expert can hand to a developer**: what to change,
+  where, and what it should look like afterwards.
 
-- **Read-only.** This skill never mutates a live site, never sends
-  authenticated requests, never submits forms with data.
-- **robots.txt honored** for every fetch via `urllib.robotparser`.
-- **Rate-limiting.** No concurrent requests; sequential with mild retry
-  backoff only on transient failures.
-- **No third-party paid APIs**; the entire audit is performed with open
-  HTTP fetches from the caller's environment.
+Beyond the defects found, always include the proactive recommendations
+(`references/beyond-defect-playbook.md`). A site with no detected faults can still be
+almost impossible to cite, usually because nothing on it is worth quoting.
 
-## How to invoke (executable)
+## Guardrails
 
-The bundled `scripts/run_audit.py` script is the single executable entry
-point. Python 3.10+ is required. Dependencies: `requests`, `beautifulsoup4`,
-`lxml`.
+- Recommend-only. No skill writes to the audited site, submits a form, or touches an
+  authenticated area. GET and HEAD only.
+- robots.txt is obeyed unconditionally. There is no override flag. If it disallows this
+  auditor, collection stops and the report contains the robots finding alone — which is
+  itself usually the answer.
+- Third-party crawler user-agents are never impersonated. Their access is evaluated
+  statically against robots.txt.
+- Rate-limited and bounded by a single wall-clock deadline covering collection and every
+  analyzer (`--budget`, default 240s; hard worst case 4.5 minutes). An audit cannot become
+  a load test, and cannot overrun the brief's 5-minute limit.
+- Say what was not checked. `limitations` is part of the report, not an appendix.
 
-```
-pip install -r skills/audit-orchestrator/scripts/requirements.txt
-python  skills/audit-orchestrator/scripts/run_audit.py example.com --pretty
-```
+## References
 
-Exit code `0` on success (report is always produced; even an unreachable
-site yields a severity-appropriate finding). Exit `2` on usage errors.
+- `references/composition.md` — check ownership table and de-duplication rules
+- `references/severity-model.md` — how severity, confidence and blast radius combine
+- `references/report-schema.json` — the output contract
+- `references/beyond-defect-playbook.md` — improvements to recommend when nothing is broken

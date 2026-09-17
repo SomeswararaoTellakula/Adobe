@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Brand Audit Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #07121f;
+      --panel: rgba(15, 23, 42, 0.72);
+      --panel-alt: #111827;
+      --card: rgba(15, 23, 42, 0.8);
+      --primary: #7c3aed;
+      --primary-2: #22d3ee;
+      --success: #34d399;
+      --warning: #fbbf24;
+      --danger: #f87171;
+      --text: #e2e8f0;
+      --muted: #a5b4cf;
+      --border: rgba(148,163,184,0.18);
+      --shadow: 0 18px 50px rgba(2,6,23,0.45);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: 'Inter', sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(124,58,237,0.22), transparent 23%),
+        radial-gradient(circle at top right, rgba(34,211,238,0.18), transparent 25%),
+        linear-gradient(180deg, #020817, #0b1120 35%, #111827);
+      color: var(--text);
+    }
+    a { color: inherit; text-decoration: none; }
+    .shell {
+      width: min(1260px, 94vw);
+      margin: 0 auto;
+      padding: 32px 0 54px;
+    }
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 22px;
+      background: rgba(15, 23, 42, 0.65);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      position: sticky;
+      top: 18px;
+      backdrop-filter: blur(14px);
+      z-index: 10;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+    }
+    .logo {
+      width: 36px;
+      height: 36px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--primary), var(--primary-2));
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+      color: white;
+    }
+    .nav {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      color: var(--muted);
+      font-size: 0.94rem;
+    }
+    .user-pill {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: rgba(15,23,42,0.7);
+    }
+    .avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(135deg, #a78bfa, #67e8f9);
+      color: #0f172a;
+      font-weight: 800;
+    }
+    .layout {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 22px;
+      margin-top: 26px;
+    }
+    .sidebar, .content {
+      background: rgba(15, 23, 42, 0.68);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(12px);
+    }
+    .sidebar {
+      padding: 22px 18px;
+    }
+    .card-title {
+      margin: 0 0 14px;
+      font-size: 0.76rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--muted);
+    }
+    .form-box {
+      display: grid;
+      gap: 14px;
+    }
+    .field label {
+      display: block;
+      color: var(--muted);
+      font-size: 0.76rem;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-weight: 700;
+    }
+    .field input {
+      width: 100%;
+      border: 1px solid var(--border);
+      background: rgba(15, 23, 42, 0.8);
+      color: var(--text);
+      padding: 12px 14px;
+      border-radius: 12px;
+      font-size: 0.96rem;
+    }
+    .primary-btn {
+      border: none;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--primary), var(--primary-2));
+      color: white;
+      font-weight: 800;
+      padding: 12px 14px;
+      cursor: pointer;
+    }
+    .secondary-btn {
+      border: 1px solid var(--border);
+      background: rgba(15,23,42,0.8);
+      color: var(--text);
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-weight: 700;
+      cursor: pointer;
+      width: 100%;
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+      margin-bottom: 22px;
+    }
+    .stat-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 18px 16px;
+    }
+    .stat-card .kicker {
+      color: var(--muted);
+      font-size: 0.7rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+    .stat-card strong {
+      font-size: 2rem;
+      letter-spacing: -0.06em;
+    }
+    .content {
+      padding: 22px;
+    }
+    .table {
+      width: 100%;
+      border-collapse: collapse;
+      overflow: hidden;
+      border-radius: 18px;
+    }
+    .table th, .table td {
+      text-align: left;
+      padding: 15px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    .table thead th {
+      color: var(--muted);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      background: rgba(15,23,42,0.74);
+    }
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      padding: 6px 8px;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      border: 1px solid transparent;
+    }
+    .chip.critical { background: rgba(248,113,113,0.12); color: #fecaca; border-color: rgba(248,113,113,0.3); }
+    .chip.high { background: rgba(251,191,36,0.12); color: #fde68a; border-color: rgba(251,191,36,0.4); }
+    .chip.medium { background: rgba(96,165,250,0.12); color: #bfdbfe; border-color: rgba(96,165,250,0.4); }
+    .chip.low { background: rgba(52,211,153,0.12); color: #bbf7d0; border-color: rgba(52,211,153,0.3); }
+    .flash {
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin-bottom: 18px;
+      border: 1px solid var(--border);
+      font-size: 0.95rem;
+    }
+    .flash.success { background: rgba(52,211,153,0.08); border-color: rgba(52,211,153,0.3); color: #bbf7d0; }
+    .flash.warning { background: rgba(251,191,36,0.08); border-color: rgba(251,191,36,0.3); color: #fde68a; }
+    .flash.danger { background: rgba(248,113,113,0.08); border-color: rgba(248,113,113,0.3); color: #fecaca; }
+    .flash.info { background: rgba(34,211,238,0.08); border-color: rgba(34,211,238,0.3); color: #a5f3fc; }
+    @media (max-width: 980px) {
+      .layout { grid-template-columns: 1fr; }
+      .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="logo">B</div>
+        <span>Brand Audit</span>
+      </div>
+      <nav class="nav">
+        <span>Overview</span>
+        <span>Reports</span>
+        <span>Settings</span>
+        <div class="user-pill">
+          <div class="avatar">{{ user.name[0]|upper }}</div>
+          <span>{{ user.name }}</span>
+        </div>
+      </nav>
+    </header>
+
+    <div class="layout">
+      <aside class="sidebar">
+        <h3 class="card-title">New audit</h3>
+        <form method="post" action="{{ url_for('create_audit') }}" class="form-box">
+          <div class="field">
+            <label for="url">Website URL</label>
+            <input id="url" type="url" name="url" placeholder="https://example.com" required />
+          </div>
+          <div class="field">
+            <label for="max_pages">Max pages</label>
+            <input id="max_pages" type="number" name="max_pages" min="1" max="250" value="25" />
+          </div>
+          <div class="field">
+            <label for="budget">Budget</label>
+            <input id="budget" type="number" name="budget" min="30" max="600" value="240" />
+          </div>
+          <button class="primary-btn" type="submit">Run audit</button>
+        </form>
+
+        <div style="margin-top: 24px;">
+          <button class="secondary-btn" onclick="window.location.href='{{ url_for('logout') }}'">Sign out</button>
+        </div>
+      </aside>
+
+      <main class="content">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="flash {{ category }}">{{ message }}</div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="kicker">Audits</div>
+            <strong>{{ summary.total }}</strong>
+          </div>
+          <div class="stat-card">
+            <div class="kicker">Critical</div>
+            <strong>{{ summary.critical }}</strong>
+          </div>
+          <div class="stat-card">
+            <div class="kicker">High</div>
+            <strong>{{ summary.high }}</strong>
+          </div>
+          <div class="stat-card">
+            <div class="kicker">Sites</div>
+            <strong>{{ summary.sites }}</strong>
+          </div>
+        </div>
+
+        <div style="margin-top: 8px; margin-bottom: 12px; color: var(--muted); font-weight: 600;">
+          {% if db_ready %}MongoDB connected{% else %}MongoDB not connected - using local fallback storage{% endif %}
+        </div>
+
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Site</th>
+              <th>Findings</th>
+              <th>Critical</th>
+              <th>High</th>
+              <th>Medium</th>
+              <th>Created</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if audits %}
+              {% for audit in audits %}
+                <tr>
+                  <td><a href="{{ url_for('audit_detail', audit_id=audit.id) }}" style="font-weight:700; color:#dbeafe;">{{ audit.site }}</a></td>
+                  <td>{{ audit.summary.total_findings }}</td>
+                  <td><span class="chip critical">{{ audit.summary.critical }}</span></td>
+                  <td><span class="chip high">{{ audit.summary.high }}</span></td>
+                  <td><span class="chip medium">{{ audit.summary.medium }}</span></td>
+                  <td>{{ audit.created_at.strftime('%Y-%m-%d %H:%M') if audit.created_at else '—' }}</td>
+                </tr>
+              {% endfor %}
+            {% else %}
+              <tr>
+                <td colspan="6" style="color: var(--muted); padding: 26px 14px;">No audits yet. Run your first scan from the left panel.</td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </main>
+    </div>
+  </div>
+</body>
+</html>
