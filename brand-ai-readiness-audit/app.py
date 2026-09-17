@@ -27,6 +27,7 @@ app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "brand-audit-secret-key"
 app.config["UPLOAD_FOLDER"] = str(ROOT / "audit-output")
 
 FALLBACK_DB = {"users": [], "audits": []}
+FALLBACK_DB_PATH = ROOT / "audit-output" / ".fallback-db.json"
 DEFAULT_DEMO_USER = {
     "email": "demo@brandaudit.ai",
     "password": "brandaudit123",
@@ -41,6 +42,31 @@ ANALYSIS_DIMENSIONS = (
     ("trust", "Freshness & corroboration", "Is the information current, attributable, and corroborated?", "discoverability.trust"),
     ("engagement", "Engagement", "Can referred visitors understand and continue?", "engagement.landing"),
 )
+
+
+def load_fallback_db():
+    if not FALLBACK_DB_PATH.exists():
+        return
+    try:
+        data = json.loads(FALLBACK_DB_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return
+    FALLBACK_DB["users"] = data.get("users", [])
+    FALLBACK_DB["audits"] = data.get("audits", [])
+    for record in FALLBACK_DB["users"] + FALLBACK_DB["audits"]:
+        if isinstance(record.get("created_at"), str):
+            record["created_at"] = datetime.fromisoformat(record["created_at"])
+
+
+def save_fallback_db():
+    FALLBACK_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+    FALLBACK_DB_PATH.write_text(
+        json.dumps(FALLBACK_DB, default=lambda value: value.isoformat() if isinstance(value, datetime) else str(value)),
+        encoding="utf-8",
+    )
+
+
+load_fallback_db()
 
 
 def create_server(host="127.0.0.1", port=8000):
@@ -85,6 +111,7 @@ def ensure_demo_user():
         "password_hash": generate_password_hash(DEFAULT_DEMO_USER["password"]),
         "created_at": datetime.now(timezone.utc),
     })
+    save_fallback_db()
 
 
 def is_valid_http_url(value: str) -> bool:
@@ -121,6 +148,46 @@ def fallback_user_store():
 
 def fallback_audit_store():
     return FALLBACK_DB["audits"]
+
+
+def import_existing_audits(user):
+    user_dir = ROOT / "audit-output" / user["email"].replace("@", "_")
+    if not user_dir.exists():
+        return
+    known_paths = {audit.get("report_path") for audit in fallback_audit_store()}
+    imported = False
+    for report_path in sorted(user_dir.glob("*/report.json")):
+        output_dir = str(report_path.parent)
+        if output_dir in known_paths:
+            continue
+        report = read_report(output_dir)
+        report_summary = report.get("summary", {})
+        try:
+            created_at = datetime.strptime(report_path.parent.name, "%Y%m%d%H%M%S").replace(tzinfo=timezone.utc)
+        except ValueError:
+            created_at = datetime.fromtimestamp(report_path.stat().st_mtime, tz=timezone.utc)
+        fallback_audit_store().append({
+            "_id": f"local-audit-{len(fallback_audit_store()) + 1}",
+            "user_id": user["_id"],
+            "site": report.get("site") or report.get("url") or report_path.parent.name,
+            "url": report.get("url") or report.get("site") or "",
+            "created_at": created_at,
+            "status": "complete",
+            "summary": {
+                "total_findings": report_summary.get("total_findings", len(report.get("findings", []))),
+                "critical": report_summary.get("critical", 0),
+                "high": report_summary.get("high", 0),
+                "medium": report_summary.get("medium", 0),
+                "low": report_summary.get("low", 0),
+                "info": report_summary.get("info", 0),
+            },
+            "report_path": output_dir,
+            "scope": report.get("scope", {}),
+            "brief": report.get("summary_text") or "Audit completed.",
+        })
+        imported = True
+    if imported:
+        save_fallback_db()
 
 
 def current_user():
@@ -275,6 +342,7 @@ def signup_page():
             "created_at": datetime.now(timezone.utc),
         }
         fallback_user_store().append(user)
+        save_fallback_db()
         session["user_email"] = email
         flash("Account created successfully.", "success")
         return redirect(url_for("dashboard"))
@@ -300,10 +368,13 @@ def dashboard():
             item["id"] = str(item["_id"])
             item.pop("_id", None)
     else:
+        import_existing_audits(user)
         audits = [
             audit for audit in fallback_audit_store() if audit.get("user_id") == user["_id"]
         ]
         audits = sorted(audits, key=lambda x: x.get("created_at", ""), reverse=True)
+        for item in audits:
+            item["id"] = str(item.get("_id") or item.get("id"))
     summary = {
         "total": len(audits),
         "critical": sum(1 for a in audits if (a.get("summary") or {}).get("critical", 0) > 0),
@@ -358,6 +429,7 @@ def create_audit():
         else:
             record["_id"] = f"local-audit-{len(fallback_audit_store()) + 1}"
             fallback_audit_store().append(record)
+            save_fallback_db()
         flash("Audit completed and saved to your dashboard.", "success")
     except Exception as exc:
         flash(f"Audit failed: {exc}", "danger")
