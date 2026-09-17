@@ -151,13 +151,16 @@ def run_audit(url: str, out_dir: str, max_pages: int = 25, budget: float = 240.0
 def read_report(out_dir: str):
     report_json = Path(out_dir) / "report.json"
     summary_txt = Path(out_dir) / "summary.txt"
+    summary_text = summary_txt.read_text(encoding="utf-8", errors="replace") if summary_txt.exists() else ""
     if report_json.exists():
         try:
-            return json.loads(report_json.read_text(encoding="utf-8"))
+            report = json.loads(report_json.read_text(encoding="utf-8"))
+            report["summary_text"] = report.get("summary_text") or summary_text
+            return report
         except json.JSONDecodeError:
             pass
-    if summary_txt.exists():
-        return {"summary_text": summary_txt.read_text(encoding="utf-8", errors="replace")}
+    if summary_text:
+        return {"summary_text": summary_text}
     return {"summary_text": "No report was generated yet."}
 
 
