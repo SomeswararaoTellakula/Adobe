@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: brand-ai-readiness-audit
+    runtime: python
+    rootDir: brand-ai-readiness-audit
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 1 --timeout 300
+    healthCheckPath: /health
+    autoDeploy: true
+    disk:
+      name: audit-reports
+      mountPath: /opt/render/project/src/brand-ai-readiness-audit/audit-output
+      sizeGB: 1
+    envVars:
+      - key: SECRET_KEY
+        sync: false
+      - key: MONGO_URI
+        sync: false
+      - key: MONGO_DB
+        value: brand_audit
