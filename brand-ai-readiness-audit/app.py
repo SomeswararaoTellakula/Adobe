@@ -34,7 +34,7 @@ def storage_unavailable(error):
 
 FALLBACK_DB = {"users": [], "audits": []}
 FALLBACK_DB_PATH = ROOT / "audit-output" / ".fallback-db.json"
-MONGO_RETRY_INTERVAL = 30
+MONGO_RETRY_INTERVAL = 2
 _mongo_db = None
 _mongo_retry_after = 0.0
 DEFAULT_DEMO_USER = {
@@ -152,6 +152,7 @@ def database():
     if client is None:
         _mongo_retry_after = now + MONGO_RETRY_INTERVAL
         raise RuntimeError("MongoDB is required. Set MONGO_URI to a reachable MongoDB deployment.")
+    _mongo_retry_after = 0.0
     _mongo_db = client[os.environ.get("MONGO_DB", "brand_audit")]
     _mongo_db.users.create_index("email", unique=True)
     _mongo_db.audits.create_index("user_id")
